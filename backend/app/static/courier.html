@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>VELORA Курьер</title>
+<style>
+:root{--bg:#F5F0E6;--gold:#C9A84C;--dark:#2C2C2C}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;padding-bottom:20px}
+header{text-align:center;padding:20px;letter-spacing:.25em;font-weight:300}
+.card{background:#fff;margin:12px 16px;padding:16px;border-radius:12px;border:1px solid rgba(201,168,76,.25)}
+input{width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px}
+button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:8px;font-size:.9rem;cursor:pointer}
+.btn{background:var(--dark);color:#fff}.btn-gold{background:var(--gold);color:#fff}
+.btn2{background:#eee;color:var(--dark);padding:10px;margin:4px 0}
+.status{text-align:center;font-size:1.2rem;color:var(--gold);margin:12px 0}
+.job{border-bottom:1px solid #eee;padding:12px 0}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>VELORA COURIER</header>
+<div id="login" class="card">
+  <input id="phone" placeholder="Телефон"/>
+  <input id="pass" type="password" placeholder="Пароль"/>
+  <div id="msg"></div>
+  <button class="btn" onclick="login()">Войти</button>
+</div>
+<div id="app" class="hidden">
+  <div class="card">
+    <div class="status" id="st">—</div>
+    <button class="btn-gold" onclick="setStatus('ONLINE')">ONLINE</button>
+    <button class="btn2" onclick="setStatus('OFFLINE')">OFFLINE</button>
+    <button class="btn2" onclick="setStatus('BUSY')">BUSY</button>
+    <button class="btn2" onclick="sendGPS()">Отправить GPS</button>
+    <button class="btn2" onclick="loadJobs()">Обновить заказы</button>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:8px">Мои доставки</h3>
+    <div id="jobs"></div>
+  </div>
+</div>
+<script>
+const API="";
+let token=localStorage.getItem("courier_token");
+const H=()=>({ "Content-Type":"application/json", Authorization:"Bearer "+token });
+if(token){ document.getElementById("login").classList.add("hidden"); document.getElementById("app").classList.remove("hidden"); refresh(); }
+async function login(){
+  const r=await fetch(API+"/api/v1/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:document.getElementById("phone").value,password:document.getElementById("pass").value})});
+  const d=await r.json();
+  if(!r.ok){ document.getElementById("msg").textContent=d.detail||"Ошибка"; return; }
+  token=d.access_token; localStorage.setItem("courier_token",token);
+  document.getElementById("login").classList.add("hidden"); document.getElementById("app").classList.remove("hidden");
+  refresh();
+}
+async function refresh(){ try{ const r=await fetch(API+"/api/v1/couriers/me",{headers:H()}); const d=await r.json(); document.getElementById("st").textContent=r.ok?d.status:"Не курьер"; }catch{ document.getElementById("st").textContent="Ошибка"; } loadJobs(); }
+async function setStatus(s){ await fetch(API+"/api/v1/couriers/me/status",{method:"PATCH",headers:H(),body:JSON.stringify({status:s})}); refresh(); }
+function sendGPS(){
+  if(!navigator.geolocation){ alert("GPS недоступен"); return; }
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    await fetch(API+"/api/v1/couriers/me/location",{method:"POST",headers:H(),body:JSON.stringify({latitude:pos.coords.latitude,longitude:pos.coords.longitude})});
+    alert("GPS отправлен");
+  },()=>alert("Нет доступа к геолокации"));
+}
+async function loadJobs(){
+  const r=await fetch(API+"/api/v1/couriers/me/jobs",{headers:H()});
+  const d=await r.json();
+  const el=document.getElementById("jobs");
+  if(!r.ok||!d.length){ el.textContent="Нет заданий"; return; }
+  el.innerHTML=d.map(j=>`<div class="job"><b>${j.order_number}</b> · ${j.status}<br>${j.address||"—"} · ${j.total} TJS
+    <button class="btn2" onclick="accept(${j.delivery_id})">Принять</button>
+    <button class="btn2" onclick="complete(${j.delivery_id})">Завершить</button>
+  </div>`).join("");
+}
+async function accept(id){ await fetch(API+`/api/v1/couriers/me/jobs/${id}/accept`,{method:"POST",headers:H()}); loadJobs(); }
+async function complete(id){ await fetch(API+`/api/v1/couriers/me/jobs/${id}/complete`,{method:"POST",headers:H()}); loadJobs(); }
+</script>
+</body>
+</html>

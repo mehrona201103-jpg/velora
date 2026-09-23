@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#F5F0E6" />
+  <title>VELORA — Женская одежда</title>
+  <style>
+    :root {
+      --ivory: #F5F0E6; --cream: #F8F4EC; --beige: #E8DFD0; --champagne: #F0E6D3;
+      --gold: #C9A84C; --gold-dark: #B8943F; --charcoal: #2C2C2C; --muted: rgba(44,44,44,0.5);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--ivory); color: var(--charcoal); }
+    #splash {
+      position: fixed; inset: 0; z-index: 100;
+      background: url("/static/backgrounds/splash.png") center/cover no-repeat;
+      transition: opacity .6s, visibility .6s;
+    }
+    #splash.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+    #app { min-height: 100vh; padding-bottom: 70px; display: none; }
+    #app.show { display: block; }
+    .page { display: none; min-height: calc(100vh - 70px); background-size: cover; background-position: center top; background-color: var(--ivory); }
+    .page.active { display: block; }
+    #page-home { background-image: url("/static/backgrounds/home.png"); }
+    #page-catalog { background-image: url("/static/backgrounds/catalog.png"); }
+    #page-cart { background-image: url("/static/backgrounds/cart.png"); }
+    #page-profile { background-image: url("/static/backgrounds/profile.png"); }
+    #page-favorites { background-image: url("/static/backgrounds/favorites.png"); }
+    #page-ai { background-image: url("/static/backgrounds/silk.png"); }
+    .page-inner { max-width: 430px; margin: 0 auto; padding: 20px 18px 24px; min-height: calc(100vh - 70px); }
+    .topbar { display: flex; align-items: center; justify-content: center; padding: 8px 0 16px; }
+    .topbar h1 { font-weight: 400; font-size: 1.05rem; letter-spacing: 0.25em; }
+    .brand { text-align: center; padding: 48px 16px 24px; }
+    .brand .logo-text { font-size: 1.75rem; font-weight: 400; letter-spacing: 0.35em; }
+    .brand .sub { margin-top: 8px; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+    .brand .tagline { margin-top: 16px; font-size: 0.85rem; font-style: italic; color: var(--muted); }
+    .glass { background: rgba(255,255,255,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(201,168,76,0.2); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .section-title { font-size: 0.75rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold-dark); text-align: center; margin: 8px 0 14px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { background: rgba(255,255,255,0.88); border-radius: 10px; overflow: hidden; border: 1px solid rgba(201,168,76,0.15); }
+    .card .img { aspect-ratio: 3/4; background: linear-gradient(160deg, var(--champagne), var(--beige)); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--muted); position: relative; }
+    .card .badge { position: absolute; top: 8px; left: 8px; background: var(--gold); color: #fff; font-size: 0.6rem; padding: 3px 7px; border-radius: 20px; }
+    .card .body { padding: 10px; }
+    .card .name { font-size: 0.8rem; font-weight: 500; }
+    .card .price { margin-top: 4px; font-size: 0.85rem; color: var(--gold-dark); }
+    .card .btn { margin-top: 8px; width: 100%; border: 1px solid var(--charcoal); background: transparent; color: var(--charcoal); padding: 8px; font-size: 0.72rem; letter-spacing: 0.06em; cursor: pointer; border-radius: 4px; }
+    input, select, textarea { width: 100%; padding: 13px 14px; margin-bottom: 10px; border: 1px solid rgba(201,168,76,0.25); background: rgba(255,255,255,0.9); border-radius: 8px; font-size: 0.9rem; outline: none; }
+    .btn-primary { width: 100%; padding: 14px; border: none; background: var(--charcoal); color: var(--ivory); font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; border-radius: 8px; }
+    .btn-gold { width: 100%; padding: 14px; border: none; background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #fff; font-size: 0.85rem; cursor: pointer; border-radius: 8px; }
+    .btn-outline { width: 100%; padding: 12px; border: 1px solid var(--beige); background: transparent; color: var(--charcoal); font-size: 0.8rem; cursor: pointer; border-radius: 8px; }
+    .msg { font-size: 0.82rem; margin: 8px 0; padding: 10px 12px; border-radius: 8px; }
+    .msg.err { background: rgba(180,60,60,0.1); color: #a33; }
+    .msg.ok { background: rgba(46,125,50,0.1); color: #2e7d32; }
+    .empty { text-align: center; padding: 48px 16px; color: var(--muted); font-size: 0.9rem; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .balance { font-size: 1.15rem; color: var(--gold-dark); font-weight: 500; }
+    .status-pill { font-size: 0.65rem; padding: 3px 8px; border-radius: 20px; background: rgba(201,168,76,0.15); color: var(--gold-dark); }
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 64px; background: rgba(245,240,230,0.95); backdrop-filter: blur(16px); border-top: 1px solid rgba(201,168,76,0.2); display: flex; justify-content: space-around; align-items: center; z-index: 50; }
+    .nav button { flex: 1; border: none; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.62rem; letter-spacing: 0.04em; color: var(--muted); cursor: pointer; padding: 6px; }
+    .nav button .nav-icon { font-size: 1.2rem; }
+    .nav button.active { color: var(--gold-dark); }
+    .hidden { display: none !important; }
+    #aiBox { min-height: 60px; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div id="splash"></div>
+  <div id="app">
+    <section class="page" id="page-home">
+      <div class="page-inner">
+        <div class="brand">
+          <div class="logo-text">VELORA</div>
+          <div class="sub">Женская одежда</div>
+          <div class="tagline">Стиль · Вдохновение · Вы ♡</div>
+        </div>
+        <div class="section-title">Новинки и коллекции</div>
+        <div class="grid" id="productGrid"><div class="empty" style="grid-column:1/-1">Загрузка...</div></div>
+      </div>
+    </section>
+    <section class="page" id="page-catalog">
+      <div class="page-inner">
+        <div class="topbar"><h1>КАТАЛОГ</h1></div>
+        <input id="searchInput" type="search" placeholder="Поиск..." style="margin-bottom:16px" />
+        <div class="grid" id="catalogGrid"><div class="empty" style="grid-column:1/-1">Загрузка...</div></div>
+      </div>
+    </section>
+    <section class="page" id="page-favorites">
+      <div class="page-inner">
+        <div class="topbar"><h1>ИЗБРАННОЕ</h1></div>
+        <div class="glass"><div id="favList"><div class="empty">Загрузка...</div></div></div>
+      </div>
+    </section>
+    <section class="page" id="page-cart">
+      <div class="page-inner">
+        <div class="topbar"><h1>КОРЗИНА</h1></div>
+        <div class="glass">
+          <div id="cartList"><div class="empty">Корзина пуста</div></div>
+          <div class="row" style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(201,168,76,0.2)">
+            <span>Итого</span><span class="balance" id="cartTotal">0 TJS</span>
+          </div>
+          <div style="margin-top:14px">
+            <select id="deliveryType"><option value="PICKUP">Самовывоз</option><option value="DELIVERY">Доставка</option></select>
+            <input id="deliveryAddress" class="hidden" placeholder="Адрес доставки" />
+          </div>
+          <div id="cartMsg"></div>
+          <button class="btn-primary" id="btnCheckout" style="margin-top:8px">Оформить заказ</button>
+        </div>
+      </div>
+    </section>
+    <section class="page" id="page-profile">
+      <div class="page-inner">
+        <div class="topbar"><h1>МОЙ ПРОФИЛЬ</h1></div>
+        <div id="authBlock">
+          <div class="glass">
+            <div class="section-title">Вход</div>
+            <input id="loginPhone" type="tel" placeholder="Телефон +992..." />
+            <input id="loginPass" type="password" placeholder="Пароль" />
+            <div id="loginMsg"></div>
+            <button class="btn-primary" id="btnLogin">Войти</button>
+          </div>
+          <div class="glass">
+            <div class="section-title">Регистрация</div>
+            <input id="regFirst" placeholder="Имя" />
+            <input id="regLast" placeholder="Фамилия" />
+            <input id="regPhone" type="tel" placeholder="Телефон +992..." />
+            <input id="regPass" type="password" placeholder="Пароль (мин. 8)" />
+            <input id="regPass2" type="password" placeholder="Подтвердите пароль" />
+            <div id="regMsg"></div>
+            <button class="btn-gold" id="btnRegister">Зарегистрироваться</button>
+          </div>
+        </div>
+        <div id="userBlock" class="hidden">
+          <div class="glass" style="text-align:center">
+            <p id="userName" style="font-size:1.05rem"></p>
+            <p id="userPhone" style="font-size:0.85rem;color:var(--muted);margin-top:4px"></p>
+            <p style="margin-top:14px">Баланс</p>
+            <p class="balance" id="userBalance">0 TJS</p>
+            <p style="font-size:0.7rem;color:var(--muted);margin-top:6px" id="userRoles"></p>
+          </div>
+          <div class="glass">
+            <div class="section-title">Пополнить баланс</div>
+            <input id="topupAmount" type="number" min="1" placeholder="Сумма (TJS)" />
+            <input id="topupComment" placeholder="Комментарий" />
+            <div id="topupMsg"></div>
+            <button class="btn-gold" id="btnTopup">Отправить заявку</button>
+          </div>
+          <div class="glass">
+            <div class="section-title">Мои заказы</div>
+            <div id="ordersList"><div class="empty">Нет заказов</div></div>
+          </div>
+          <button class="btn-outline" id="btnLogout">Выйти</button>
+        </div>
+      </div>
+    </section>
+    <section class="page" id="page-ai">
+      <div class="page-inner">
+        <div class="topbar"><h1>VELORA AI</h1></div>
+        <div class="glass">
+          <textarea id="aiInput" rows="3" placeholder="чёрное платье до 500 сомони"></textarea>
+          <button class="btn-primary" id="btnAi">Спросить</button>
+          <div id="aiBox" style="margin-top:14px"></div>
+        </div>
+      </div>
+    </section>
+    <nav class="nav">
+      <button class="active" data-page="home"><span class="nav-icon">⌂</span>Главная</button>
+      <button data-page="catalog"><span class="nav-icon">◇</span>Каталог</button>
+      <button data-page="favorites"><span class="nav-icon">♡</span>Избранное</button>
+      <button data-page="cart"><span class="nav-icon">Bag</span>Корзина</button>
+      <button data-page="profile"><span class="nav-icon">◎</span>Профиль</button>
+    </nav>
+  </div>
+  <script>
+    const API = "";
+    const token = () => localStorage.getItem("access_token");
+    const headers = () => { const h = {"Content-Type":"application/json"}; if (token()) h.Authorization = "Bearer "+token(); return h; };
+    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    setTimeout(() => { document.getElementById("splash").classList.add("hide"); document.getElementById("app").classList.add("show"); showPage("home"); }, 1800);
+    function showPage(name) {
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      const el = document.getElementById("page-"+name); if (el) el.classList.add("active");
+      document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("active", b.dataset.page === name));
+      if (name === "home" || name === "catalog") loadProducts(name === "catalog" ? "catalogGrid" : "productGrid");
+      if (name === "cart") loadCart();
+      if (name === "profile") loadProfile();
+      if (name === "favorites") loadFavorites();
+    }
+    document.querySelectorAll(".nav button").forEach(b => b.addEventListener("click", () => showPage(b.dataset.page)));
+    function renderProducts(items, gridId) {
+      const grid = document.getElementById(gridId);
+      if (!items || !items.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">Каталог пуст. Создайте товар в /docs</div>'; return; }
+      grid.innerHTML = items.map(p => `<div class="card"><div class="img">${p.is_new?'<span class="badge">NEW</span>':''}VELORA</div><div class="body"><div class="name">${esc(p.name_ru)}</div><div class="price">${p.base_price} TJS</div><button class="btn" onclick="addToCart(${p.default_variant_id})">В корзину</button></div></div>`).join("");
+    }
+    async function loadProducts(gridId) {
+      try {
+        const q = document.getElementById("searchInput")?.value;
+        let url = API + "/api/v1/products?per_page=40";
+        if (q) url += "&search=" + encodeURIComponent(q);
+        const r = await fetch(url); const data = await r.json();
+        renderProducts(data.items, gridId);
+      } catch { document.getElementById(gridId).innerHTML = '<div class="empty" style="grid-column:1/-1">Ошибка</div>'; }
+    }
+    document.getElementById("searchInput")?.addEventListener("input", () => { clearTimeout(window._st); window._st = setTimeout(() => loadProducts("catalogGrid"), 300); });
+    window.addToCart = async function(variantId) {
+      if (!token()) { showPage("profile"); alert("Сначала войдите"); return; }
+      if (!variantId) { alert("Товар недоступен"); return; }
+      try {
+        const r = await fetch(API+"/api/v1/cart/items", { method:"POST", headers:headers(), body: JSON.stringify({variant_id:variantId, quantity:1}) });
+        const data = await r.json();
+        if (!r.ok) throw new Error(typeof data.detail==="string"?data.detail:"Ошибка");
+        alert("Добавлено в корзину");
+      } catch(e) { alert(e.message); }
+    };
+    async function loadCart() {
+      const el = document.getElementById("cartList");
+      if (!token()) { el.innerHTML = '<div class="empty">Войдите в профиль</div>'; return; }
+      try {
+        const r = await fetch(API+"/api/v1/cart", { headers: headers() }); const data = await r.json();
+        document.getElementById("cartTotal").textContent = (data.subtotal||0)+" TJS";
+        if (!data.items?.length) { el.innerHTML = '<div class="empty">Корзина пуста</div>'; return; }
+        el.innerHTML = data.items.map(i => `<div class="row" style="padding:12px 0;border-bottom:1px solid rgba(201,168,76,0.15)"><div><div style="font-size:0.9rem">${esc(i.product_name||"Товар")}</div><div style="font-size:0.75rem;color:var(--muted)">${i.quantity} × ${i.unit_price}</div></div><div style="text-align:right"><div style="color:var(--gold-dark)">${i.total_price}</div><button onclick="removeCartItem(${i.id})" style="border:none;background:none;color:var(--muted);font-size:0.7rem;cursor:pointer">Удалить</button></div></div>`).join("");
+      } catch { el.innerHTML = '<div class="empty">Ошибка</div>'; }
+    }
+    window.removeCartItem = async function(id) { await fetch(API+"/api/v1/cart/items/"+id, { method:"DELETE", headers:headers() }); loadCart(); };
+    document.getElementById("deliveryType").addEventListener("change", e => { document.getElementById("deliveryAddress").classList.toggle("hidden", e.target.value !== "DELIVERY"); });
+    document.getElementById("btnCheckout").addEventListener("click", async () => {
+      const msg = document.getElementById("cartMsg"); msg.innerHTML = "";
+      if (!token()) { showPage("profile"); return; }
+      const delivery_type = document.getElementById("deliveryType").value;
+      try {
+        const r = await fetch(API+"/api/v1/orders/checkout", { method:"POST", headers:headers(), body: JSON.stringify({ delivery_type, address: delivery_type==="DELIVERY"?document.getElementById("deliveryAddress").value:null, idempotency_key:"web-"+Date.now() }) });
+        const data = await r.json();
+        if (!r.ok) throw new Error(typeof data.detail==="string"?data.detail:"Ошибка");
+        msg.innerHTML = `<div class="msg ok">Заказ ${data.order_number} · ${data.status}</div>`;
+        loadCart();
+      } catch(e) { msg.innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+    });
+    async function loadProfile() {
+      if (!token()) { document.getElementById("authBlock").classList.remove("hidden"); document.getElementById("userBlock").classList.add("hidden"); return; }
+      try {
+        const r = await fetch(API+"/api/v1/users/me", { headers:headers() }); if (!r.ok) throw new Error();
+        const u = await r.json();
+        document.getElementById("authBlock").classList.add("hidden"); document.getElementById("userBlock").classList.remove("hidden");
+        document.getElementById("userName").textContent = u.first_name+" "+u.last_name;
+        document.getElementById("userPhone").textContent = u.phone;
+        document.getElementById("userBalance").textContent = u.balance+" TJS";
+        document.getElementById("userRoles").textContent = (u.roles||[]).join(" · ");
+        loadOrders();
+      } catch { localStorage.removeItem("access_token"); document.getElementById("authBlock").classList.remove("hidden"); document.getElementById("userBlock").classList.add("hidden"); }
+    }
+    async function loadOrders() {
+      const el = document.getElementById("ordersList");
+      try {
+        const r = await fetch(API+"/api/v1/orders", { headers:headers() }); const data = await r.json();
+        if (!data.items?.length) { el.innerHTML = '<div class="empty">Нет заказов</div>'; return; }
+        el.innerHTML = data.items.map(o => `<div class="row" style="padding:10px 0;border-bottom:1px solid rgba(201,168,76,0.12)"><div><div style="font-size:0.85rem">${esc(o.order_number)}</div><div style="font-size:0.75rem;color:var(--muted)">${o.total} ${o.currency}</div></div><span class="status-pill">${esc(o.status)}</span></div>`).join("");
+      } catch { el.innerHTML = '<div class="empty">Ошибка</div>'; }
+    }
+    document.getElementById("btnLogin").addEventListener("click", async () => {
+      const msg = document.getElementById("loginMsg"); msg.innerHTML = "";
+      try {
+        const r = await fetch(API+"/api/v1/auth/login", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ phone: document.getElementById("loginPhone").value, password: document.getElementById("loginPass").value }) });
+        const data = await r.json(); if (!r.ok) throw new Error(data.detail||"Ошибка");
+        localStorage.setItem("access_token", data.access_token); localStorage.setItem("refresh_token", data.refresh_token); loadProfile();
+      } catch(e) { msg.innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+    });
+    document.getElementById("btnRegister").addEventListener("click", async () => {
+      const msg = document.getElementById("regMsg"); msg.innerHTML = "";
+      try {
+        const r = await fetch(API+"/api/v1/auth/register", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ first_name: document.getElementById("regFirst").value, last_name: document.getElementById("regLast").value, phone: document.getElementById("regPhone").value, password: document.getElementById("regPass").value, password_confirm: document.getElementById("regPass2").value }) });
+        const data = await r.json(); if (!r.ok) throw new Error(typeof data.detail==="string"?data.detail:"Ошибка");
+        localStorage.setItem("access_token", data.access_token); localStorage.setItem("refresh_token", data.refresh_token); loadProfile();
+      } catch(e) { msg.innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+    });
+    document.getElementById("btnLogout").addEventListener("click", () => { localStorage.removeItem("access_token"); localStorage.removeItem("refresh_token"); loadProfile(); });
+    document.getElementById("btnTopup").addEventListener("click", async () => {
+      const msg = document.getElementById("topupMsg"); msg.innerHTML = "";
+      try {
+        const r = await fetch(API+"/api/v1/balance/topup", { method:"POST", headers:headers(), body: JSON.stringify({ amount: Number(document.getElementById("topupAmount").value), comment: document.getElementById("topupComment").value||null, idempotency_key: "topup-"+Date.now() }) });
+        const data = await r.json(); if (!r.ok) throw new Error(data.detail||"Ошибка");
+        msg.innerHTML = `<div class="msg ok">Заявка #${data.id} · ${data.amount} TJS</div>`;
+      } catch(e) { msg.innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+    });
+    document.getElementById("btnAi").addEventListener("click", async () => {
+      const box = document.getElementById("aiBox"); box.textContent = "Подбираю...";
+      try {
+        const r = await fetch(API+"/api/v1/ai/chat", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ message: document.getElementById("aiInput").value }) });
+        const data = await r.json(); if (!r.ok) throw new Error(data.detail||"Ошибка");
+        box.textContent = data.reply;
+      } catch(e) { box.textContent = e.message; }
+    });
+  
+    async function loadFavorites() {
+      const el = document.getElementById("favList");
+      if (!el) return;
+      if (!token()) { el.innerHTML = '<div class="empty">Войдите в профиль</div>'; return; }
+      try {
+        const r = await fetch(API + "/api/v1/favorites", { headers: headers() });
+        const data = await r.json();
+        if (!data.length) { el.innerHTML = '<div class="empty">Пока пусто</div>'; return; }
+        el.innerHTML = data.map(f => `<div class="row" style="padding:10px 0;border-bottom:1px solid rgba(201,168,76,0.12)"><div><div style="font-size:0.9rem">${esc(f.name_ru)}</div><div style="font-size:0.8rem;color:var(--gold-dark)">${f.base_price} TJS</div></div><button onclick="removeFav(${f.product_id})" style="border:none;background:none;color:var(--muted);cursor:pointer">✕</button></div>`).join("");
+      } catch { el.innerHTML = '<div class="empty">Ошибка</div>'; }
+    }
+    window.removeFav = async function(pid) {
+      await fetch(API + "/api/v1/favorites/" + pid, { method: "DELETE", headers: headers() });
+      loadFavorites();
+    };
+
+  </script>
+</body>
+</html>

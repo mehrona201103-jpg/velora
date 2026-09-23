@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ivory: #F5F0E6;
+  --cream: #F8F4EC;
+  --beige: #E8DFD0;
+  --champagne: #F0E6D3;
+  --gold: #C9A84C;
+  --warm-gold: #B8943F;
+  --charcoal: #2C2C2C;
+  --black: #1A1A1A;
+  --white: #FFFFFF;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--ivory);
+  color: var(--charcoal);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Premium button */
+.btn-primary {
+  @apply bg-charcoal text-ivory px-6 py-3 rounded-sm font-medium tracking-wide
+         transition-all duration-200 active:scale-95 disabled:opacity-50;
+}
+
+.btn-gold {
+  @apply bg-gold text-white px-6 py-3 rounded-sm font-medium tracking-wide
+         transition-all duration-200 active:scale-95;
+}

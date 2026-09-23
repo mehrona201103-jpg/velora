@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>VELORA Admin</title>
+<style>
+:root{--bg:#1a1a1a;--card:#242424;--gold:#C9A84C;--text:#f5f0e6;--muted:#999}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{padding:16px 20px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center}
+header h1{font-weight:300;letter-spacing:.2em;font-size:1.1rem}
+.tabs{display:flex;gap:4px;padding:12px;flex-wrap:wrap;border-bottom:1px solid #333}
+.tab{padding:8px 14px;background:var(--card);border:none;color:var(--muted);cursor:pointer;border-radius:4px;font-size:.8rem}
+.tab.active{background:var(--gold);color:#1a1a1a}
+main{max-width:900px;margin:0 auto;padding:16px}
+.card{background:var(--card);border-radius:8px;padding:16px;margin-bottom:12px}
+input,select,textarea{width:100%;padding:10px;margin:6px 0;background:#111;border:1px solid #333;color:var(--text);border-radius:4px}
+button.btn{padding:10px 16px;background:var(--gold);border:none;color:#1a1a1a;cursor:pointer;border-radius:4px;font-weight:600;margin-top:8px}
+button.btn2{padding:8px 12px;background:#333;border:none;color:var(--text);cursor:pointer;border-radius:4px;font-size:.8rem;margin:2px}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{padding:8px;text-align:left;border-bottom:1px solid #333}
+.msg{padding:10px;margin:8px 0;border-radius:4px;font-size:.85rem}
+.ok{background:#1b3;color:#fff}.err{background:#a33;color:#fff}
+.hidden{display:none}
+.login-box{max-width:360px;margin:80px auto}
+</style>
+</head>
+<body>
+<div id="loginView" class="login-box card">
+  <h2 style="margin-bottom:12px;letter-spacing:.1em">ADMIN LOGIN</h2>
+  <input id="phone" placeholder="Телефон" value=""/>
+  <input id="pass" type="password" placeholder="Пароль"/>
+  <div id="loginMsg"></div>
+  <button class="btn" onclick="doLogin()">Войти</button>
+</div>
+<div id="appView" class="hidden">
+<header>
+  <h1>VELORA ADMIN</h1>
+  <button class="btn2" onclick="logout()">Выйти</button>
+</header>
+<div class="tabs">
+  <button class="tab active" data-t="orders" onclick="showTab('orders')">Заказы</button>
+  <button class="tab" data-t="products" onclick="showTab('products')">Товары</button>
+  <button class="tab" data-t="topups" onclick="showTab('topups')">Пополнения</button>
+  <button class="tab" data-t="customers" onclick="showTab('customers')">Клиенты CRM</button>
+  <button class="tab" data-t="promo" onclick="showTab('promo')">Промо</button>
+  <button class="tab" data-t="chat" onclick="showTab('chat')">Чат</button>
+</div>
+<main>
+  <div id="tab-orders" class="card">
+    <h3>Заказы</h3>
+    <button class="btn2" onclick="loadOrders()">Обновить</button>
+    <div id="ordersList" style="margin-top:12px;overflow-x:auto"></div>
+  </div>
+  <div id="tab-products" class="card hidden">
+    <h3>Создать товар</h3>
+    <input id="pName" placeholder="Название"/>
+    <input id="pSku" placeholder="SKU"/>
+    <input id="pPrice" type="number" placeholder="Цена"/>
+    <input id="pStock" type="number" placeholder="Остаток"/>
+    <textarea id="pDesc" placeholder="Описание" rows="2"></textarea>
+    <div id="prodMsg"></div>
+    <button class="btn" onclick="createProduct()">Создать</button>
+  </div>
+  <div id="tab-topups" class="card hidden">
+    <h3>Заявки на пополнение</h3>
+    <button class="btn2" onclick="loadTopups()">Обновить</button>
+    <div id="topupsList" style="margin-top:12px"></div>
+  </div>
+  <div id="tab-customers" class="card hidden">
+    <h3>Клиенты</h3>
+    <button class="btn2" onclick="loadCustomers()">Обновить</button>
+    <div id="custList" style="margin-top:12px"></div>
+  </div>
+  <div id="tab-promo" class="card hidden">
+    <h3>Промокод</h3>
+    <input id="promoCode" placeholder="CODE"/>
+    <select id="promoType"><option value="percent">%</option><option value="fixed">Фикс</option></select>
+    <input id="promoVal" type="number" placeholder="Значение"/>
+    <div id="promoMsg"></div>
+    <button class="btn" onclick="createPromo()">Создать</button>
+  </div>
+  <div id="tab-chat" class="card hidden">
+    <h3>Чат поддержки (room: support)</h3>
+    <div id="chatBox" style="height:240px;overflow-y:auto;background:#111;padding:10px;border-radius:4px;margin-bottom:8px;font-size:.85rem"></div>
+    <input id="chatInput" placeholder="Сообщение"/>
+    <button class="btn" onclick="sendChat()">Отправить</button>
+  </div>
+</main>
+</div>
+<script>
+const API="";
+let token=localStorage.getItem("admin_token");
+const H=()=>({ "Content-Type":"application/json", Authorization:"Bearer "+token });
+const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+if(token){ document.getElementById("loginView").classList.add("hidden"); document.getElementById("appView").classList.remove("hidden"); loadOrders(); }
+
+async function doLogin(){
+  const r=await fetch(API+"/api/v1/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:document.getElementById("phone").value,password:document.getElementById("pass").value})});
+  const d=await r.json();
+  if(!r.ok){ document.getElementById("loginMsg").innerHTML=`<div class="msg err">${esc(d.detail)}</div>`; return; }
+  token=d.access_token; localStorage.setItem("admin_token",token);
+  document.getElementById("loginView").classList.add("hidden");
+  document.getElementById("appView").classList.remove("hidden");
+  loadOrders();
+}
+function logout(){ localStorage.removeItem("admin_token"); location.reload(); }
+function showTab(t){
+  document.querySelectorAll("[id^=tab-]").forEach(e=>e.classList.add("hidden"));
+  document.getElementById("tab-"+t).classList.remove("hidden");
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.t===t));
+  if(t==="orders") loadOrders();
+  if(t==="topups") loadTopups();
+  if(t==="customers") loadCustomers();
+  if(t==="chat") loadChat();
+}
+
+async function loadOrders(){
+  const r=await fetch(API+"/api/v1/admin/orders",{headers:H()});
+  const d=await r.json();
+  if(!r.ok){ document.getElementById("ordersList").textContent=d.detail||"Ошибка"; return; }
+  let html="<table><tr><th>#</th><th>Статус</th><th>Сумма</th><th>Тип</th><th></th></tr>";
+  (d.items||[]).forEach(o=>{
+    html+=`<tr><td>${esc(o.order_number)}</td><td>${esc(o.status)}</td><td>${o.total}</td><td>${o.delivery_type}</td>
+    <td>
+      <button class="btn2" onclick="setStatus(${o.id},'CONFIRMED')">Confirm</button>
+      <button class="btn2" onclick="setStatus(${o.id},'PACKING')">Pack</button>
+      <button class="btn2" onclick="setStatus(${o.id},'READY_FOR_PICKUP')">Ready</button>
+      <button class="btn2" onclick="setStatus(${o.id},'CANCELLED')">Cancel</button>
+    </td></tr>`;
+  });
+  html+="</table>";
+  document.getElementById("ordersList").innerHTML=html||"Пусто";
+}
+async function setStatus(id,status){
+  await fetch(API+`/api/v1/admin/orders/${id}/status`,{method:"PATCH",headers:H(),body:JSON.stringify({status})});
+  loadOrders();
+}
+async function createProduct(){
+  const body={name_ru:document.getElementById("pName").value,sku:document.getElementById("pSku").value,base_price:Number(document.getElementById("pPrice").value),initial_stock:Number(document.getElementById("pStock").value||0),description_ru:document.getElementById("pDesc").value||null};
+  const r=await fetch(API+"/api/v1/admin/products",{method:"POST",headers:H(),body:JSON.stringify(body)});
+  const d=await r.json();
+  document.getElementById("prodMsg").innerHTML=r.ok?`<div class="msg ok">Создан #${d.id}</div>`:`<div class="msg err">${esc(d.detail)}</div>`;
+}
+async function loadTopups(){
+  const r=await fetch(API+"/api/v1/balance/admin/topups/pending",{headers:H()});
+  const d=await r.json();
+  if(!r.ok){ document.getElementById("topupsList").textContent=d.detail||"Нет доступа"; return; }
+  if(!d.length){ document.getElementById("topupsList").textContent="Нет заявок"; return; }
+  document.getElementById("topupsList").innerHTML=d.map(t=>`<div style="padding:10px 0;border-bottom:1px solid #333">
+    #${t.id} · user ${t.user_id} · <b>${t.amount} TJS</b> · ${t.status}
+    <button class="btn2" onclick="approveTopup(${t.id})">Approve</button>
+    <button class="btn2" onclick="rejectTopup(${t.id})">Reject</button>
+  </div>`).join("");
+}
+async function approveTopup(id){ await fetch(API+`/api/v1/balance/admin/topups/${id}/approve`,{method:"POST",headers:H(),body:JSON.stringify({admin_comment:"approved"})}); loadTopups(); }
+async function rejectTopup(id){ await fetch(API+`/api/v1/balance/admin/topups/${id}/reject`,{method:"POST",headers:H(),body:JSON.stringify({admin_comment:"Отклонено"})}); loadTopups(); }
+async function loadCustomers(){
+  const r=await fetch(API+"/api/v1/crm/customers",{headers:H()});
+  const d=await r.json();
+  if(!r.ok){ document.getElementById("custList").textContent=d.detail||"Ошибка"; return; }
+  document.getElementById("custList").innerHTML=`<table><tr><th>ID</th><th>Имя</th><th>Телефон</th><th>Баланс</th></tr>${(d||[]).map(c=>`<tr><td>${c.id}</td><td>${esc(c.first_name)} ${esc(c.last_name)}</td><td>${esc(c.phone)}</td><td>${c.balance}</td></tr>`).join("")}</table>`;
+}
+async function createPromo(){
+  const r=await fetch(API+"/api/v1/promotions",{method:"POST",headers:H(),body:JSON.stringify({code:document.getElementById("promoCode").value,discount_type:document.getElementById("promoType").value,discount_value:Number(document.getElementById("promoVal").value)})});
+  const d=await r.json();
+  document.getElementById("promoMsg").innerHTML=r.ok?`<div class="msg ok">OK ${d.code}</div>`:`<div class="msg err">${esc(JSON.stringify(d.detail))}</div>`;
+}
+async function loadChat(){
+  const r=await fetch(API+"/api/v1/chat/rooms/support/messages",{headers:H()});
+  const d=await r.json();
+  const box=document.getElementById("chatBox");
+  if(!r.ok){ box.textContent="Ошибка"; return; }
+  box.innerHTML=(d||[]).map(m=>`<div><b>#${m.sender_id}</b>: ${esc(m.text)}</div>`).join("");
+  box.scrollTop=box.scrollHeight;
+}
+async function sendChat(){
+  const text=document.getElementById("chatInput").value;
+  await fetch(API+"/api/v1/chat/messages",{method:"POST",headers:H(),body:JSON.stringify({room:"support",text})});
+  document.getElementById("chatInput").value="";
+  loadChat();
+}
+</script>
+</body>
+</html>

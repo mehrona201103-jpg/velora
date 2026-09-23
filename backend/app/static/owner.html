@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>VELORA Owner</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0f0f0f;color:#f5f0e6;margin:0;padding:20px}
+h1{font-weight:300;letter-spacing:.3em;font-size:1.2rem}
+.card{background:#1c1c1c;padding:16px;border-radius:8px;margin:12px 0;border:1px solid #333}
+input{width:100%;padding:10px;margin:6px 0;background:#111;border:1px solid #333;color:#fff;border-radius:4px}
+button{padding:12px 20px;background:#C9A84C;border:none;color:#111;cursor:pointer;border-radius:4px;font-weight:600}
+.hidden{display:none} a{color:#C9A84C}
+</style>
+</head>
+<body>
+<h1>VELORA OWNER</h1>
+<div id="login" class="card">
+  <input id="phone" placeholder="Телефон OWNER"/>
+  <input id="pass" type="password" placeholder="Пароль"/>
+  <button onclick="login()">Войти</button>
+  <p id="msg" style="margin-top:8px;color:#f66"></p>
+</div>
+<div id="app" class="hidden">
+  <div class="card">
+    <p>Панель владельца</p>
+    <p style="margin-top:8px;color:#999;font-size:.9rem">Полный доступ через Admin + CRM + финансы</p>
+    <p style="margin-top:12px"><a href="/admin">→ Открыть Admin Panel</a></p>
+    <p style="margin-top:8px"><a href="/docs">→ API Docs</a></p>
+    <p style="margin-top:8px"><a href="/">→ Витрина</a></p>
+  </div>
+  <div class="card">
+    <h3>VIP уровни</h3>
+    <input id="vipName" placeholder="Название (Gold)"/>
+    <input id="vipMin" type="number" placeholder="Мин. сумма покупок"/>
+    <input id="vipDisc" type="number" placeholder="Скидка %"/>
+    <button onclick="createVip()">Создать VIP</button>
+    <div id="vipMsg" style="margin-top:8px"></div>
+    <div id="vipList" style="margin-top:12px"></div>
+  </div>
+</div>
+<script>
+const API="";
+let token=localStorage.getItem("owner_token");
+const H=()=>({ "Content-Type":"application/json", Authorization:"Bearer "+token });
+if(token){ document.getElementById("login").classList.add("hidden"); document.getElementById("app").classList.remove("hidden"); loadVip(); }
+async function login(){
+  const r=await fetch(API+"/api/v1/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:document.getElementById("phone").value,password:document.getElementById("pass").value})});
+  const d=await r.json();
+  if(!r.ok){ document.getElementById("msg").textContent=d.detail||"Ошибка"; return; }
+  token=d.access_token; localStorage.setItem("owner_token",token);
+  document.getElementById("login").classList.add("hidden"); document.getElementById("app").classList.remove("hidden"); loadVip();
+}
+async function loadVip(){
+  const r=await fetch(API+"/api/v1/crm/vip-levels",{headers:H()});
+  const d=await r.json();
+  document.getElementById("vipList").innerHTML=(d||[]).map(v=>`<div>${v.name} · от ${v.min_spent} · ${v.discount_percent}%</div>`).join("")||"Нет уровней";
+}
+async function createVip(){
+  const r=await fetch(API+"/api/v1/crm/vip-levels",{method:"POST",headers:H(),body:JSON.stringify({name:document.getElementById("vipName").value,min_spent:Number(document.getElementById("vipMin").value||0),discount_percent:Number(document.getElementById("vipDisc").value||0)})});
+  const d=await r.json();
+  document.getElementById("vipMsg").textContent=r.ok?"Создано":(d.detail||"Ошибка");
+  loadVip();
+}
+</script>
+</body>
+</html>
